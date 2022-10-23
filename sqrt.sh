@@ -63,29 +63,21 @@ printf '%s\n' \
 '}                                                                                                              '
 }
 
-#function testCode {
-#printf '%s\n' \
-#'#include <iostream>                                                                                            ' \
-#'                                                                                                               ' \
-#'#define NAME_GENERATOR(i_n, i_d, s_n, s_d) generate_init##i_n##over##i_d##_step##s_n##over##s_d                ' \
-#'#define NAME(i_n, i_d, s_n, s_d) NAME_GENERATOR(i_n, i_d, s_n, s_d)                                            ' \
-#'void NAME(INIT_NUM, INIT_DEN, STEP_NUM, STEP_DEN)()                                                            ' \
-#'{                                                                                                              ' \
-#' std :: cout << "init: " <<  INIT_NUM << " over " <<  INIT_DEN << " "                                          ' \
-#'             << "step: " <<  STEP_NUM << " over " <<  STEP_DEN << std :: endl;                                 ' \
-#'}                                                                                                              '
-#}
+init_ns=(  0   1   2   3   4   5   6   7   8   9 10 20 30 40 50 60 70 80 90)
+init_ds=(  1   1   1   1   1   1   1   1   1   1  1  1  1  1  1  1  1  1  1)
+step_ns=(  1   1   1   1   1   1   1   1   1   1  1  1  1  1  1  1  1  1  1)
+step_ds=(100 100 100 100 100 100 100 100 100 100 10 10 10 10 10 10 10 10 10)
 
 function unitName {
- printf 'testCode_init%dover%d_step%dover%d.o ' $1 $2 $3 $4
+ printf 'testCode_init%dover%d_step%dover%d.o ' ${init_ns[$1]} ${init_ds[$1]} ${step_ns[$1]} ${step_ds[$1]}
 }
 
 function generateFunctionName {
- printf 'generate_init%dover%d_step%dover%d();' $1 $2 $3 $4
+ printf 'generate_init%dover%d_step%dover%d();' ${init_ns[$1]} ${init_ds[$1]} ${step_ns[$1]} ${step_ds[$1]}
 }
 
 function appendToHeader {
- printf 'void %s\n' $(generateFunctionName $1 $2 $3 $4) >> testCode.hpp
+ printf 'void %s\n' $(generateFunctionName $1) >> testCode.hpp
 }
 
 function initialiseMain {
@@ -105,58 +97,35 @@ function closeMain {
 }
 
 function appendToMain {
- printf '%s\n' $(generateFunctionName $1 $2 $3 $4) >> testMain.cpp
+ printf '%s\n' $(generateFunctionName $1) >> testMain.cpp
 }
 
 function generateUnit {
- init_num=$1
- init_den=$2
- step_num=$3
- step_den=$4
+ init_num=${init_ns[$1]}
+ init_den=${init_ds[$1]}
+ step_num=${step_ns[$1]}
+ step_den=${step_ds[$1]}
  [ ! -f "testCode.cpp" ] && (testCode > testCode.cpp)
  [ ! -f "testMain.cpp" ] && initialiseMain
- appendToMain $init_num $init_den $step_num $step_den
- appendToHeader $init_num $init_den $step_num $step_den
- clang++ -o $(unitName $init_num $init_den $step_num $step_den) -I ~/crap/include -D INIT_NUM=$init_num -D INIT_DEN=$init_den -D STEP_NUM=$step_num -D STEP_DEN=$step_den -c testCode.cpp &
-}
-
-init_ns=(  0   1   2   3   4   5   6   7   8   9 10 20 30 40 50 60 70 80 90)
-init_ds=(  1   1   1   1   1   1   1   1   1   1  1  1  1  1  1  1  1  1  1)
-step_ns=(  1   1   1   1   1   1   1   1   1   1  1  1  1  1  1  1  1  1  1)
-step_ds=(100 100 100 100 100 100 100 100 100 100 10 10 10 10 10 10 10 10 10)
-
-function generateUnitN {
- generateUnit ${init_ns[$1]} ${init_ds[$1]} ${step_ns[$1]} ${step_ds[$1]}
-}
-
-function unitNameN {
- unitName ${init_ns[$1]} ${init_ds[$1]} ${step_ns[$1]} ${step_ds[$1]}
+ appendToMain $1
+ appendToHeader $1
+ clang++ -o $(unitName $1) -I ~/crap/include -D INIT_NUM=$init_num -D INIT_DEN=$init_den -D STEP_NUM=$step_num -D STEP_DEN=$step_den -c testCode.cpp &
 }
 
 unitNames=()
 
-#clang++ -o ~/gnuplotTests/testCode.o -c <(testCode)
-#clang++ -o ~/gnuplotTests/testCode.o -c testCode.cpp
-#clang++ -o ~/gnuplotTests/testCode ~/gnuplotTests/testCode.o
 for i in {1..18}
 do
- generateUnitN $i
- unitNames+=$(unitNameN $i)
+ generateUnit $i
+ unitNames+=$(unitName $i)
 done
-#generateUnit 0 1 1 100
-#generateUnit 1 1 1 100
-#generateUnit 2 1 1 100
 closeMain
 wait
-#clang++ -o ~/gnuplotTests/testCode testMain.o $(unitName 0 1 1 100) $(unitName 1 1 1 100) $(unitName 2 1 1 100)
 clang++ -o ~/gnuplotTests/testCode testMain.o ${unitNames[*]}
 for i in {1..18}
 do
- rm -f $(unitNameN $i)
+ rm -f $(unitName $i)
 done
-#rm -f $(unitName 0 1 1 100)
-#rm -f $(unitName 1 1 1 100)
-#rm -f $(unitName 2 1 1 100)
 rm -f testCode.cpp
 rm -f testCode.hpp
 rm -f testMain.cpp
