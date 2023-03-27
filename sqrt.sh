@@ -12,7 +12,7 @@ printf '%s\n' \
 'using valueType = std :: int64_t;                                                                              ' \
 "using step = crap :: valueRatio<valueType, '+', STEP_NUM, STEP_DEN>;                                           " \
 "using init = crap :: valueRatio<valueType, '+', INIT_NUM, INIT_DEN>;                                           " \
-'constexpr const std :: size_t steps = 100u;                                                                    ' \
+'constexpr const std :: size_t steps = 99u;                                                                     ' \
 '                                                                                                               ' \
 'template <class ... Elements> using transformation = crap :: transformType<crap :: sqrtType, Elements...>;     ' \
 'template <class ... Elements> using addition =                                                                 ' \
@@ -42,6 +42,7 @@ printf '%s\n' \
 '#include <cstdlib>                                                                                             ' \
 '#include <iostream>                                                                                            ' \
 '#include <iterator>                                                                                            ' \
+'#include <limits>                                                                                              ' \
 '#include <sstream>                                                                                             ' \
 '#include <string>                                                                                              ' \
 '#define NAME_GENERATOR(i_n, i_d, s_n, s_d) generate_init##i_n##over##i_d##_step##s_n##over##s_d                ' \
@@ -56,6 +57,7 @@ printf '%s\n' \
 '		 [&stream](const auto& x, const auto& y) -> std :: string                                       ' \
 '		 {                                                                                              ' \
 '		  stream.str("");                                                                               ' \
+'		  stream.precision(std :: numeric_limits <long double> :: max_digits10);                        ' \
 "		  stream << x << ' ' << y;                                                                      " \
 '		  return stream.str();                                                                          ' \
 '		 });                                                                                            ' \
@@ -114,15 +116,26 @@ function generateUnit {
 
 unitNames=()
 
-for i in {1..18}
+while getopts j:h: flag
+do
+ case "${flag}" in
+  j) threadNum=${OPTARG};;
+  h) printHelp=true;;
+ esac
+done
+
+for i in $(seq `expr ${#init_ns[@]} - 1`)
 do
  generateUnit $i
  unitNames+=$(unitName $i)
+ if ! [ -z ${threadNum+default} ]; then
+  [[ $threadNum -ne 0 ]] && [[ `expr $i % $threadNum` -eq 0 ]] && wait;
+ fi
 done
 closeMain
 wait
 clang++ -o ~/gnuplotTests/testCode testMain.o ${unitNames[*]}
-for i in {1..18}
+for i in $(seq `expr ${#init_ns[@]} - 1`)
 do
  rm -f $(unitName $i)
 done
